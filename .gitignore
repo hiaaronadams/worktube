@@ -11,6 +11,8 @@ venv/
 # Env
 .env
 .env.local
+.env.prod
+.env.*.local
 
 # Node / frontend
 node_modules/

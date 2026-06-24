@@ -5,8 +5,16 @@ import type {
   OpportunityList,
 } from "./types";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") || "http://localhost:8000";
+function resolveApiBase(): string {
+  const raw = process.env.NEXT_PUBLIC_API_BASE?.trim() || "http://localhost:8000";
+  const base = raw.replace(/\/$/, "");
+  // "/api" (relative, same-origin) and absolute http(s) URLs pass through.
+  // A bare hostname (e.g. "api.example.com") is assumed https.
+  if (base.startsWith("/") || /^https?:\/\//.test(base)) return base;
+  return `https://${base}`;
+}
+
+const API_BASE = resolveApiBase();
 
 function buildQuery(filters: OpportunityFilters): string {
   const params = new URLSearchParams();

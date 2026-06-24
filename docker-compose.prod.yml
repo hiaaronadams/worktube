@@ -1,0 +1,69 @@
+# Full-stack production deploy (Postgres + FastAPI + Next.js + Caddy).
+#
+#   cp .env.prod.example .env.prod   # then edit secrets + DOMAIN
+#   docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
+#
+# Caddy terminates TLS and serves the app on one origin; the API lives under
+# /api. Only Caddy publishes ports to the host.
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-worktube}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}
+      POSTGRES_DB: ${POSTGRES_DB:-worktube}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-worktube}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-worktube}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-worktube}
+      SAM_API_KEY: ${SAM_API_KEY:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+    expose:
+      - "8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Same-origin: the browser calls /api, Caddy routes it to the backend.
+        NEXT_PUBLIC_API_BASE: /api
+    restart: unless-stopped
+    depends_on:
+      - backend
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - frontend
+      - backend
+    environment:
+      DOMAIN: ${DOMAIN:-:80}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

@@ -87,6 +87,22 @@ The dashboard talks to the API over REST (CORS is preconfigured for
 - `/saved` — saved opportunities
 - `/pipeline` — status board (new → reviewing → … → won/lost)
 
+## Deploy (VPS)
+
+The full stack runs in Docker behind a Caddy reverse proxy (auto-HTTPS,
+single origin with the API under `/api`). On any Ubuntu/Debian VPS:
+
+```bash
+cp .env.prod.example .env.prod   # set DOMAIN, POSTGRES_PASSWORD, SAM_API_KEY
+docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
+```
+
+Step-by-step instructions (Hostinger VPS, DNS, firewall, ingestion cron,
+backups) are in **[`DEPLOY.md`](DEPLOY.md)**.
+
+> ⚠️ The app has **no login yet** — add auth before exposing it publicly. See
+> the note at the end of `DEPLOY.md`.
+
 ## Layout
 
 ```
