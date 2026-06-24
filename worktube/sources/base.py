@@ -19,6 +19,11 @@ class SourceAdapter(ABC):
     key: str
     name: str
 
+    @classmethod
+    def available(cls) -> tuple[bool, str]:
+        """(is_configured, reason_if_not). Override to gate on API keys etc."""
+        return True, ""
+
     @abstractmethod
     def fetch(self) -> list[NormalizedOpportunity]:
         ...

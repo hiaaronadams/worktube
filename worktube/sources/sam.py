@@ -57,6 +57,10 @@ class SamAdapter(SourceAdapter):
     key = "sam"
     name = "SAM.gov"
 
+    @classmethod
+    def available(cls) -> tuple[bool, str]:
+        return (bool(config.sam_api_key), "" if config.sam_api_key else "SAM_API_KEY not set")
+
     def __init__(self, *, lookback_days: int | None = None, limit: int = 100):
         self.lookback_days = lookback_days or config.ingest_lookback_days
         self.limit = limit

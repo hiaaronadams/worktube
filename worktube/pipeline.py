@@ -1,7 +1,7 @@
 """Build a report: fetch from sources -> dedup -> score -> sorted display rows.
 
-No database. Everything lives in memory and is handed to the renderer, which
-bakes it into a single static HTML file.
+No database. Each source's health (ok / failed / skipped) is tracked so the
+report can show a ✓/✕ status panel.
 """
 from __future__ import annotations
 
@@ -11,20 +11,33 @@ from datetime import date, datetime, timezone
 
 from worktube.config import config
 from worktube.dedup import compute_content_hash, compute_dedup_key
+from worktube.feeds import FEEDS
 from worktube.models import NormalizedOpportunity
 from worktube.scoring import score_text
 from worktube.sources.base import SourceAdapter
+from worktube.sources.grants import GrantsAdapter
+from worktube.sources.rss import RssAdapter
 from worktube.sources.sam import SamAdapter
 from worktube.sources.sample import SampleAdapter
 from worktube.sources.ungm import UngmAdapter
 
 logger = logging.getLogger("worktube.pipeline")
 
-# Sources that pull live data (sample is handled separately as a fallback).
-LIVE_ADAPTERS: dict[str, type[SourceAdapter]] = {
+# Built-in live sources run by default, in order.
+BUILTIN_ADAPTERS: dict[str, type[SourceAdapter]] = {
     "sam": SamAdapter,
+    "grants": GrantsAdapter,
     "ungm": UngmAdapter,
 }
+
+
+@dataclass
+class SourceStatus:
+    key: str
+    name: str
+    status: str          # "ok" | "failed" | "skipped"
+    count: int = 0
+    message: str = ""
 
 
 @dataclass
@@ -32,7 +45,7 @@ class Report:
     generated_at: str
     demo: bool
     opportunities: list[dict]
-    source_stats: dict[str, int]
+    sources: list[dict]
     warnings: list[str] = field(default_factory=list)
     high_fit_threshold: float = config.high_fit_threshold
 
@@ -42,9 +55,7 @@ class Report:
 
     @property
     def high_fit_count(self) -> int:
-        return sum(
-            1 for o in self.opportunities if o["relevance_score"] >= self.high_fit_threshold
-        )
+        return sum(1 for o in self.opportunities if o["relevance_score"] >= self.high_fit_threshold)
 
 
 def _iso(d: date | None) -> str | None:
@@ -52,7 +63,6 @@ def _iso(d: date | None) -> str | None:
 
 
 def _to_row(opp: NormalizedOpportunity) -> dict:
-    """NormalizedOpportunity + scores -> a JSON-serializable display row."""
     score = score_text(
         title=opp.title,
         summary=opp.summary,
@@ -74,43 +84,63 @@ def _to_row(opp: NormalizedOpportunity) -> dict:
     return row
 
 
+def _run_one(key: str, lookback_days: int | None) -> tuple[SourceStatus, list[NormalizedOpportunity]]:
+    """Run a single built-in source, returning its status and any records."""
+    adapter_cls = BUILTIN_ADAPTERS[key]
+    available, reason = adapter_cls.available()
+    if not available:
+        return SourceStatus(key, adapter_cls.name, "skipped", message=reason), []
+    try:
+        kwargs = {"lookback_days": lookback_days} if key == "sam" else {}
+        records = adapter_cls(**kwargs).fetch()
+        return SourceStatus(key, adapter_cls.name, "ok", count=len(records)), records
+    except Exception as exc:  # noqa: BLE001 — a bad source shouldn't kill the report
+        logger.warning("Source %s failed: %s", key, exc)
+        return SourceStatus(key, adapter_cls.name, "failed", message=str(exc)[:200]), []
+
+
+def _run_feed(feed: dict) -> tuple[SourceStatus, list[NormalizedOpportunity]]:
+    name = feed.get("name", feed.get("key", "RSS feed"))
+    key = feed.get("key", name)
+    try:
+        records = RssAdapter(**feed).fetch()
+        return SourceStatus(key, name, "ok", count=len(records)), records
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("RSS feed %s failed: %s", name, exc)
+        return SourceStatus(key, name, "failed", message=str(exc)[:200]), []
+
+
 def build_report(
     *,
     sources: list[str] | None = None,
     demo: bool = False,
     lookback_days: int | None = None,
 ) -> Report:
-    warnings: list[str] = []
-    stats: dict[str, int] = {}
+    statuses: list[SourceStatus] = []
     collected: list[NormalizedOpportunity] = []
 
-    chosen = sources or list(LIVE_ADAPTERS)
+    chosen = sources or list(BUILTIN_ADAPTERS)
 
     if not demo:
         for key in chosen:
-            adapter_cls = LIVE_ADAPTERS.get(key)
-            if adapter_cls is None:
-                warnings.append(f"Unknown source '{key}' skipped.")
+            if key not in BUILTIN_ADAPTERS:
+                statuses.append(SourceStatus(key, key, "failed", message="unknown source"))
                 continue
-            if key == "sam" and not config.sam_api_key:
-                warnings.append("SAM.gov skipped — SAM_API_KEY not set.")
-                continue
-            try:
-                kwargs = {"lookback_days": lookback_days} if key == "sam" else {}
-                records = adapter_cls(**kwargs).fetch()
-                stats[key] = len(records)
+            status, records = _run_one(key, lookback_days)
+            statuses.append(status)
+            collected.extend(records)
+        # Curated RSS feeds (only when not restricted to a specific source list)
+        if sources is None:
+            for feed in FEEDS:
+                status, records = _run_feed(feed)
+                statuses.append(status)
                 collected.extend(records)
-            except Exception as exc:  # noqa: BLE001 — a bad source shouldn't kill the report
-                warnings.append(f"{key} failed: {exc}")
-                logger.warning("Source %s failed: %s", key, exc)
 
-    # Fall back to sample data if we got nothing live (or demo was requested).
+    # Fall back to sample data if nothing live came through.
     is_demo = demo or not collected
     if is_demo and not collected:
         collected = SampleAdapter().fetch()
-        stats["sample"] = len(collected)
-        if not demo:
-            warnings.append("No live data available — showing sample/demo opportunities.")
+        statuses.append(SourceStatus("sample", "Sample data", "ok", count=len(collected)))
 
     # Dedup (keep first occurrence of each key).
     seen: set[str] = set()
@@ -122,15 +152,18 @@ def build_report(
         seen.add(key)
         rows.append(_to_row(opp))
 
-    # Sort: best fit first, then soonest deadline.
-    rows.sort(
-        key=lambda r: (-r["relevance_score"], r["deadline"] or "9999-12-31")
-    )
+    rows.sort(key=lambda r: (-r["relevance_score"], r["deadline"] or "9999-12-31"))
+
+    warnings = [
+        f"{s.name}: {s.message}" for s in statuses if s.status != "ok" and s.message
+    ]
+    if is_demo and not demo:
+        warnings.append("No live data available — showing sample/demo opportunities.")
 
     return Report(
         generated_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
         demo=is_demo,
         opportunities=rows,
-        source_stats=stats,
+        sources=[asdict(s) for s in statuses],
         warnings=warnings,
     )

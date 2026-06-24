@@ -41,7 +41,7 @@ def _int(name: str, default: int) -> int:
         return default
 
 
-@dataclass(frozen=True)
+@dataclass
 class Config:
     # SAM.gov (https://open.gsa.gov/api/get-opportunities-public-api/)
     sam_api_key: str = os.environ.get("SAM_API_KEY", "")

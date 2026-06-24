@@ -44,12 +44,22 @@ python generate_report.py --sources sam   # just SAM.gov
 
 The generated HTML is a small self-contained app:
 
+- a **Sources** panel showing each feed's health (✓ working / ✕ failing /
+  ○ not configured, with the count or error on hover)
 - ranked list of opportunities (best design/sector fit first)
 - filters: search, min fit score, deadline window (7/14/30/60d), source,
   buyer type, tags, and a "saved only" toggle
 - per-opportunity: **save**, **pipeline status**, **notes**, **copy summary**,
   and a link to the original listing
 - saved/status/notes persist in the browser via localStorage
+
+## Sources
+
+Wired in: **SAM.gov** (US federal contracts, needs a key), **Grants.gov** (US
+federal grants, no key), **UNGM** (UN). Add curated **RSS feeds** (state/local
+portals, foundations, universities) in `worktube/feeds.py` — each becomes its
+own source with its own ✓/✕ status. See [`docs/SOURCES.md`](docs/SOURCES.md)
+for the full list of candidates and how to add New York / state-local sources.
 
 ## Hosting it (e.g. Hostinger)
 
@@ -74,9 +84,14 @@ python generate_report.py --out . --no-dated   # add SAM_API_KEY for live data
 git commit -am "update report" && git push     # Hostinger auto-deploys
 ```
 
-> Note: the homepage is `index.html`; the Python source files sit alongside it
-> in the repo and are harmless (not linked). To hide them from the web, drop an
-> `.htaccess` in `public_html` or have Hostinger serve only `index.html`.
+### Keeping it off Google
+
+The repo ships three layers so search engines don't index the subdomain:
+`robots.txt` (Disallow all), a `<meta name="robots" content="noindex">` in the
+page, and an `X-Robots-Tag` header via `.htaccess`. The same `.htaccess` also
+404s the Python source files that git-deploy copies into `public_html`, so only
+`index.html` (and `robots.txt`) are reachable. Nothing else to configure — it
+deploys with the repo.
 
 ## Layout
 

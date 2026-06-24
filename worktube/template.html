@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
 <title>Worktube — RFP Report</title>
 <style>
   :root {
@@ -47,6 +48,14 @@
   }
   .pill.active { border-color: #f6b9ac; background: var(--tomato-50); color: var(--tomato-700); }
   .toggle { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .sources { border: 1px solid var(--line); border-radius: 9px; background: #fff; padding: 10px 12px; }
+  .srcstat { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-size: 13px; }
+  .srcstat .ico { width: 15px; text-align: center; font-weight: 700; flex-shrink: 0; }
+  .srcstat .ico.ok { color: #16a34a; }
+  .srcstat .ico.fail { color: #dc2626; }
+  .srcstat .ico.skip { color: #94a3b8; }
+  .srcstat .nm { color: #334155; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .srcstat .ct { margin-left: auto; color: #94a3b8; font-size: 12px; flex-shrink: 0; }
   .main { flex: 1; min-width: 0; }
   .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
   .count { color: var(--muted); font-weight: 400; font-size: 13px; }
@@ -97,6 +106,10 @@
 
 <div class="layout">
   <aside class="rail">
+    <div class="group">
+      <label class="h">Sources</label>
+      <div class="sources" id="sourceStatus"></div>
+    </div>
     <div class="group">
       <label class="h" for="q">Search</label>
       <input type="text" id="q" placeholder="Title or summary…" />
@@ -178,6 +191,23 @@ function buildHeader() {
   const banners = document.getElementById("banners");
   if (REPORT.demo) banners.innerHTML += `<div class="banner">Showing <strong>sample/demo data</strong>. Set a SAM_API_KEY and re-run to pull live opportunities.</div>`;
   (REPORT.warnings || []).forEach(w => { banners.innerHTML += `<div class="banner">${esc(w)}</div>`; });
+}
+
+function buildSourceStatus() {
+  const el = document.getElementById("sourceStatus");
+  const sources = REPORT.sources || [];
+  if (!sources.length) { el.innerHTML = '<div class="srcstat"><span class="nm" style="color:#94a3b8">No sources</span></div>'; return; }
+  const ICON = { ok: ["✓", "ok"], failed: ["✕", "fail"], skipped: ["○", "skip"] };
+  el.innerHTML = sources.map(s => {
+    const [glyph, cls] = ICON[s.status] || ["○", "skip"];
+    const right = s.status === "ok" ? (s.count + "") : titleCase(s.status);
+    const tip = s.message ? ` title="${esc(s.message)}"` : "";
+    return `<div class="srcstat"${tip}>
+      <span class="ico ${cls}">${glyph}</span>
+      <span class="nm">${esc(s.name)}</span>
+      <span class="ct">${esc(right)}</span>
+    </div>`;
+  }).join("");
 }
 
 function buildControls() {
@@ -305,7 +335,7 @@ document.getElementById("list").addEventListener("change", e => {
   else if (act === "notebox") setState(id, { notes: e.target.value });
 });
 
-buildHeader(); buildControls(); render();
+buildHeader(); buildSourceStatus(); buildControls(); render();
 </script>
 </body>
 </html>

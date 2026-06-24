@@ -14,15 +14,15 @@ from __future__ import annotations
 import argparse
 import logging
 
-from worktube.pipeline import LIVE_ADAPTERS, build_report
+from worktube.pipeline import BUILTIN_ADAPTERS, build_report
 from worktube.render import write_report
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate a Worktube RFP report")
     parser.add_argument("--demo", action="store_true", help="use sample data")
-    parser.add_argument("--sources", nargs="+", choices=sorted(LIVE_ADAPTERS),
-                        help="limit to specific live sources (default: all)")
+    parser.add_argument("--sources", nargs="+", choices=sorted(BUILTIN_ADAPTERS),
+                        help="limit to specific live sources (default: all + RSS feeds)")
     parser.add_argument("--out", default="reports", help="output directory (default: reports)")
     parser.add_argument("--no-dated", action="store_true",
                         help="write only index.html (no dated copy) — handy for the deploy folder")

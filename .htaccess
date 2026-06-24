@@ -1,0 +1,19 @@
+# Worktube — Apache config for the static report (Hostinger public_html).
+
+# Keep this subdomain out of search engines (belt-and-suspenders with
+# robots.txt and the page's <meta name="robots">). Sent on every response.
+<IfModule mod_headers.c>
+  Header set X-Robots-Tag "noindex, nofollow, noarchive, nosnippet"
+</IfModule>
+
+# Only the report (index.html) and robots.txt should be web-reachable.
+# git-deploy also copies the Python source/config into public_html — 404 those
+# so they aren't served. (robots.txt deliberately NOT matched here.)
+RedirectMatch 404 (?i)\.(py|md|ini|lock|env|example|cfg)$
+RedirectMatch 404 (?i)/requirements\.txt$
+RedirectMatch 404 (?i)^/(worktube|tests|docs|\.git)/
+
+# Apache already blocks .ht* files by default; this is explicit just in case.
+<FilesMatch "^\.ht">
+  Require all denied
+</FilesMatch>

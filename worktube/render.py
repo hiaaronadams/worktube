@@ -16,7 +16,7 @@ def render_html(report: Report) -> str:
         "generated_at": report.generated_at,
         "demo": report.demo,
         "high_fit_threshold": report.high_fit_threshold,
-        "source_stats": report.source_stats,
+        "sources": report.sources,
         "warnings": report.warnings,
         "opportunities": report.opportunities,
     }
