@@ -75,13 +75,29 @@ or run `python -m http.server` locally.
 3. Deploy. Visiting your domain serves the root `index.html`.
 4. (Optional) enable **Auto-Deployment** so each `git push` updates the site.
 
-### Refreshing the report
+### Refreshing the report — automated (GitHub Actions)
 
-Regenerate the root `index.html`, commit, and push:
+You don't run anything locally. A scheduled GitHub Action
+([`.github/workflows/report.yml`](.github/workflows/report.yml)) regenerates
+`index.html` with live data on GitHub's servers, commits it, and Hostinger
+auto-deploys. One-time setup, all in the browser:
+
+1. **GitHub → Settings → Secrets and variables → Actions → New repository
+   secret:** `SAM_API_KEY` = your SAM.gov key. (Optional — Grants.gov needs no
+   key, so the report has real data either way.)
+2. **GitHub → Actions tab →** enable workflows if prompted → **"Build report" →
+   Run workflow** for the first run.
+3. **Hostinger → your Git deployment →** enable **Auto-Deployment** so each
+   commit to `main` updates the site.
+
+After that it refreshes twice daily automatically; hit **Run workflow** anytime
+for an on-demand refresh.
+
+### Refreshing manually (optional)
 
 ```bash
-python generate_report.py --out . --no-dated   # add SAM_API_KEY for live data
-git commit -am "update report" && git push     # Hostinger auto-deploys
+python generate_report.py --out . --no-dated   # SAM_API_KEY via .env for live data
+git commit -am "update report" && git push
 ```
 
 ### Keeping it off Google

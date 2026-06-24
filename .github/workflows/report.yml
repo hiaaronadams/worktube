@@ -1,0 +1,56 @@
+name: Build report
+
+# Regenerates index.html with live data and commits it back to the repo.
+# Hostinger (with Git auto-deploy enabled) then serves the updated page.
+#
+# One-time setup (all in the GitHub web UI, no local machine):
+#   Settings -> Secrets and variables -> Actions -> New repository secret
+#     name:  SAM_API_KEY   value: <your SAM.gov key>   (optional — Grants.gov
+#     needs no key, so the report has real data even without it)
+
+on:
+  schedule:
+    - cron: "0 11 * * *"     # 11:00 UTC daily
+    - cron: "0 23 * * *"     # 23:00 UTC daily
+  workflow_dispatch:          # "Run workflow" button for on-demand refresh
+  push:
+    branches: [main]
+    paths-ignore:
+      - "index.html"          # don't loop when this job commits index.html
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-report
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate report (live data)
+        env:
+          SAM_API_KEY: ${{ secrets.SAM_API_KEY }}
+        run: python generate_report.py --out . --no-dated -v
+
+      - name: Commit updated report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if git diff --staged --quiet; then
+            echo "No change in report."
+          else
+            git commit -m "Update report [skip ci]"
+            git push
+          fi
