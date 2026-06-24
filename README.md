@@ -27,13 +27,18 @@ python generate_report.py --demo
 open reports/index.html        # macOS  (use xdg-open on Linux, or just double-click)
 ```
 
-With a SAM.gov API key set, it pulls live US federal opportunities:
+With a SAM.gov API key, it pulls live US federal opportunities. Put the key in
+a local `.env` file (gitignored — never committed):
 
 ```bash
-export SAM_API_KEY=your-key-here     # https://open.gsa.gov/api/get-opportunities-public-api/
-python generate_report.py            # live sources; falls back to demo if none reachable
-python generate_report.py --sources sam
+cp .env.example .env
+# edit .env and set SAM_API_KEY=...   (https://open.gsa.gov/api/get-opportunities-public-api/)
+
+python generate_report.py                 # live sources; falls back to demo if none reachable
+python generate_report.py --sources sam   # just SAM.gov
 ```
+
+(You can also `export SAM_API_KEY=...` instead of using `.env`.)
 
 ## The report
 

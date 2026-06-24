@@ -3,6 +3,28 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
+
+
+def _load_dotenv() -> None:
+    """Load KEY=VALUE pairs from a local .env into os.environ (no override).
+
+    Tiny, dependency-free. Lets you keep SAM_API_KEY in a gitignored .env file
+    instead of exporting it every time. Real environment variables win.
+    """
+    path = Path(__file__).resolve().parent.parent / ".env"
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key, value = key.strip(), value.strip().strip('"').strip("'")
+        os.environ.setdefault(key, value)
+
+
+_load_dotenv()
 
 
 def _float(name: str, default: float) -> float:

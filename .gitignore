@@ -8,9 +8,10 @@ venv/
 .mypy_cache/
 .ruff_cache/
 
-# Env
+# Env (keep .env.example tracked, ignore real secrets)
 .env
-.env.*
+.env.local
+!.env.example
 
 # Generated reports (the HTML output)
 reports/*.html
