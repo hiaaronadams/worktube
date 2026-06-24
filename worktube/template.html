@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Worktube — RFP Report</title>
+<style>
+  :root {
+    --tomato: #ef4123; --tomato-50: #fff3f0; --tomato-700: #b22a14;
+    --ink: #0f172a; --muted: #64748b; --line: #e2e8f0; --bg: #f8fafc;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 14px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--tomato-700); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  header {
+    background: #fff; border-bottom: 1px solid var(--line);
+    padding: 16px 24px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .logo {
+    width: 28px; height: 28px; border-radius: 7px; background: var(--tomato);
+    color: #fff; font-weight: 700; display: grid; place-items: center;
+  }
+  h1 { font-size: 18px; margin: 0; }
+  .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .banner {
+    margin: 12px 24px 0; padding: 10px 14px; border-radius: 8px;
+    background: #fffbeb; border: 1px solid #fde68a; color: #92400e; font-size: 13px;
+  }
+  .layout { display: flex; gap: 28px; max-width: 1200px; margin: 0 auto; padding: 20px 24px; }
+  .rail { width: 240px; flex-shrink: 0; }
+  .rail .group { margin-bottom: 20px; }
+  .rail label.h { display: block; font-weight: 600; margin-bottom: 6px; }
+  .rail input[type=text] { width: 100%; padding: 7px 9px; border: 1px solid var(--line); border-radius: 7px; }
+  .rail input[type=range] { width: 100%; accent-color: var(--tomato); }
+  .checks { max-height: 180px; overflow: auto; }
+  .checks label { display: flex; gap: 8px; align-items: center; color: var(--muted); cursor: pointer; padding: 1px 0; }
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill {
+    border: 1px solid var(--line); background: #fff; color: var(--muted);
+    border-radius: 7px; padding: 4px 9px; font-size: 12px; cursor: pointer;
+  }
+  .pill.active { border-color: #f6b9ac; background: var(--tomato-50); color: var(--tomato-700); }
+  .toggle { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .main { flex: 1; min-width: 0; }
+  .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .count { color: var(--muted); font-weight: 400; font-size: 13px; }
+  select { padding: 7px 9px; border: 1px solid var(--line); border-radius: 7px; background: #fff; }
+  .card {
+    background: #fff; border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,.03);
+  }
+  .card .top { display: flex; gap: 12px; align-items: flex-start; }
+  .card .meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .card h3 { margin: 0; font-size: 16px; }
+  .card .who { color: var(--muted); margin-top: 3px; }
+  .card .summary { color: #334155; margin-top: 8px; }
+  .card .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+  .tag { background: #f1f5f9; color: #475569; border-radius: 5px; padding: 2px 7px; font-size: 11px; }
+  .badge { border-radius: 999px; padding: 2px 9px; font-size: 12px; font-weight: 500; }
+  .score { border: 1px solid; border-radius: 6px; padding: 2px 8px; font-size: 12px; font-weight: 600; }
+  .score .lbl { font-weight: 400; opacity: .7; margin-left: 3px; }
+  .s-hi { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+  .s-mid { background: #fef9c3; color: #854d0e; border-color: #fde68a; }
+  .s-lo { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }
+  .src { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #94a3b8; }
+  .side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+  .deadline { font-size: 12px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+  .deadline.urgent { color: #e11d48; }
+  button.act {
+    border: 1px solid var(--line); background: #fff; color: #475569;
+    border-radius: 7px; padding: 5px 10px; font-size: 12px; cursor: pointer; font-weight: 500;
+  }
+  button.act:hover { background: #f8fafc; }
+  button.act.saved { border-color: #f6b9ac; background: var(--tomato-50); color: var(--tomato-700); }
+  .card select { font-size: 12px; padding: 5px 7px; }
+  .notes { margin-top: 10px; display: none; }
+  .notes.open { display: block; }
+  .notes textarea { width: 100%; border: 1px solid var(--line); border-radius: 7px; padding: 8px; font: inherit; resize: vertical; }
+  .linkrow { margin-top: 10px; display: flex; gap: 14px; font-size: 13px; }
+  .empty { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 40px; text-align: center; color: var(--muted); }
+  .clear { background: none; border: none; color: var(--tomato-700); cursor: pointer; font-size: 12px; padding: 0; }
+  @media (max-width: 820px) { .layout { flex-direction: column; } .rail { width: auto; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><div class="logo">W</div><h1>Worktube — RFP Report</h1></div>
+  <div class="sub" id="subhead"></div>
+</header>
+<div id="banners"></div>
+
+<div class="layout">
+  <aside class="rail">
+    <div class="group">
+      <label class="h" for="q">Search</label>
+      <input type="text" id="q" placeholder="Title or summary…" />
+    </div>
+    <div class="group">
+      <label class="h">Min fit score: <span id="scoreVal">0</span></label>
+      <input type="range" id="minScore" min="0" max="100" step="5" value="0" />
+    </div>
+    <div class="group">
+      <label class="h">Deadline within</label>
+      <div class="pills" id="deadlinePills"></div>
+    </div>
+    <div class="group">
+      <label class="toggle"><input type="checkbox" id="savedOnly" /> Saved only</label>
+    </div>
+    <div class="group" id="sourceGroup">
+      <label class="h">Source</label><div class="checks" id="sourceChecks"></div>
+    </div>
+    <div class="group" id="buyerGroup">
+      <label class="h">Buyer type</label><div class="checks" id="buyerChecks"></div>
+    </div>
+    <div class="group" id="tagGroup">
+      <label class="h">Tags</label><div class="checks" id="tagChecks"></div>
+    </div>
+    <button class="clear" id="clearBtn">Clear all filters</button>
+  </aside>
+
+  <main class="main">
+    <div class="toolbar">
+      <div><strong>Opportunities</strong> <span class="count" id="resultCount"></span></div>
+      <select id="sort">
+        <option value="relevance">Sort: Best fit</option>
+        <option value="design">Sort: Design fit</option>
+        <option value="deadline">Sort: Deadline (soonest)</option>
+      </select>
+    </div>
+    <div id="list"></div>
+  </main>
+</div>
+
+<script>
+const REPORT = /*__REPORT_JSON__*/null;
+
+const STATUSES = ["new","reviewing","maybe","pitched","submitted","won","lost","ignored"];
+const DEADLINE_WINDOWS = [["Any",null],["7d",7],["14d",14],["30d",30],["60d",60]];
+const STORAGE_KEY = "worktube.state.v1";
+
+let userState = {};
+try { userState = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch (e) { userState = {}; }
+function persist() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(userState)); } catch (e) {} }
+function stateFor(id) { return userState[id] || { saved: false, status: "new", notes: "" }; }
+function setState(id, patch) { userState[id] = Object.assign(stateFor(id), patch); persist(); }
+
+const filters = { q: "", minScore: 0, deadline: null, savedOnly: false, sources: new Set(), buyers: new Set(), tags: new Set(), sort: "relevance" };
+
+function titleCase(s) { return (s || "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()); }
+function esc(s) { return (s == null ? "" : String(s)).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c])); }
+function daysUntil(iso) { if (!iso) return null; const d = new Date(iso + "T00:00:00"); if (isNaN(d)) return null; return Math.round((d - new Date().setHours(0,0,0,0)) / 86400000); }
+function deadlineLabel(iso) { const n = daysUntil(iso); if (n === null) return "No deadline"; if (n < 0) return "Closed"; if (n === 0) return "Due today"; if (n === 1) return "1 day left"; return n + " days left"; }
+function scoreClass(s) { return s >= 70 ? "s-hi" : s >= 40 ? "s-mid" : "s-lo"; }
+function uniq(arr) { return Array.from(new Set(arr)); }
+
+function copyText(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).catch(fallbackCopy.bind(null, text)); }
+  else fallbackCopy(text);
+}
+function fallbackCopy(text) {
+  const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta);
+  ta.select(); try { document.execCommand("copy"); } catch (e) {} document.body.removeChild(ta);
+}
+
+function buildHeader() {
+  const d = new Date(REPORT.generated_at);
+  const when = isNaN(d) ? REPORT.generated_at : d.toLocaleString();
+  const hi = REPORT.opportunities.filter(o => o.relevance_score >= REPORT.high_fit_threshold).length;
+  document.getElementById("subhead").textContent =
+    `Generated ${when} · ${REPORT.opportunities.length} opportunities · ${hi} high-fit (≥${REPORT.high_fit_threshold})`;
+
+  const banners = document.getElementById("banners");
+  if (REPORT.demo) banners.innerHTML += `<div class="banner">Showing <strong>sample/demo data</strong>. Set a SAM_API_KEY and re-run to pull live opportunities.</div>`;
+  (REPORT.warnings || []).forEach(w => { banners.innerHTML += `<div class="banner">${esc(w)}</div>`; });
+}
+
+function buildControls() {
+  const pills = document.getElementById("deadlinePills");
+  DEADLINE_WINDOWS.forEach(([label, val]) => {
+    const b = document.createElement("button"); b.className = "pill" + (val === null ? " active" : ""); b.textContent = label;
+    b.onclick = () => { filters.deadline = val; [...pills.children].forEach(c => c.classList.remove("active")); b.classList.add("active"); render(); };
+    pills.appendChild(b);
+  });
+
+  checkGroup("sourceChecks", uniq(REPORT.opportunities.map(o => o.source_type)).sort(), filters.sources);
+  checkGroup("buyerChecks", uniq(REPORT.opportunities.map(o => o.buyer_type).filter(Boolean)).sort(), filters.buyers);
+  checkGroup("tagChecks", uniq(REPORT.opportunities.flatMap(o => o.tags || [])).sort(), filters.tags);
+
+  document.getElementById("q").oninput = e => { filters.q = e.target.value.toLowerCase(); render(); };
+  const ms = document.getElementById("minScore");
+  ms.oninput = e => { filters.minScore = +e.target.value; document.getElementById("scoreVal").textContent = e.target.value; render(); };
+  document.getElementById("savedOnly").onchange = e => { filters.savedOnly = e.target.checked; render(); };
+  document.getElementById("sort").onchange = e => { filters.sort = e.target.value; render(); };
+  document.getElementById("clearBtn").onclick = clearFilters;
+}
+
+function checkGroup(elId, values, set) {
+  const el = document.getElementById(elId);
+  if (!values.length) { el.parentElement.style.display = "none"; return; }
+  el.innerHTML = "";
+  values.forEach(v => {
+    const id = elId + "-" + v;
+    const label = document.createElement("label");
+    label.innerHTML = `<input type="checkbox" id="${esc(id)}" /> ${esc(titleCase(v))}`;
+    label.querySelector("input").onchange = e => { e.target.checked ? set.add(v) : set.delete(v); render(); };
+    el.appendChild(label);
+  });
+}
+
+function clearFilters() {
+  filters.q = ""; filters.minScore = 0; filters.deadline = null; filters.savedOnly = false;
+  filters.sources.clear(); filters.buyers.clear(); filters.tags.clear();
+  document.getElementById("q").value = ""; document.getElementById("minScore").value = 0;
+  document.getElementById("scoreVal").textContent = "0"; document.getElementById("savedOnly").checked = false;
+  document.querySelectorAll(".checks input").forEach(c => c.checked = false);
+  const pills = document.getElementById("deadlinePills"); [...pills.children].forEach((c,i) => c.classList.toggle("active", i === 0));
+  render();
+}
+
+function matches(o) {
+  const st = stateFor(o.id);
+  if (filters.savedOnly && !st.saved) return false;
+  if (o.relevance_score < filters.minScore) return false;
+  if (filters.sources.size && !filters.sources.has(o.source_type)) return false;
+  if (filters.buyers.size && !filters.buyers.has(o.buyer_type)) return false;
+  if (filters.tags.size && !(o.tags || []).some(t => filters.tags.has(t))) return false;
+  if (filters.deadline !== null) { const n = daysUntil(o.deadline); if (n === null || n < 0 || n > filters.deadline) return false; }
+  if (filters.q) { const hay = (o.title + " " + (o.summary || "")).toLowerCase(); if (!hay.includes(filters.q)) return false; }
+  return true;
+}
+
+function sortRows(rows) {
+  const by = filters.sort;
+  return rows.slice().sort((a, b) => {
+    if (by === "deadline") return (a.deadline || "9999") < (b.deadline || "9999") ? -1 : 1;
+    if (by === "design") return b.design_fit_score - a.design_fit_score;
+    return b.relevance_score - a.relevance_score;
+  });
+}
+
+function cardHTML(o) {
+  const st = stateFor(o.id);
+  const urgent = (() => { const n = daysUntil(o.deadline); return n !== null && n >= 0 && n <= 14; })();
+  const tags = (o.tags || []).slice(0, 8).map(t => `<span class="tag">${esc(titleCase(t))}</span>`).join("");
+  const opts = STATUSES.map(s => `<option value="${s}"${s === st.status ? " selected" : ""}>${titleCase(s)}</option>`).join("");
+  const link = o.source_url ? `<a href="${esc(o.source_url)}" target="_blank" rel="noreferrer">Open source ↗</a>` : "";
+  return `<article class="card" data-id="${esc(o.id)}">
+    <div class="top">
+      <div style="flex:1;min-width:0">
+        <div class="meta">
+          <span class="score ${scoreClass(o.relevance_score)}">${Math.round(o.relevance_score)}<span class="lbl">fit</span></span>
+          <span class="score ${scoreClass(o.design_fit_score)}">${Math.round(o.design_fit_score)}<span class="lbl">design</span></span>
+          <span class="src">${esc(o.source_name)}</span>
+        </div>
+        <h3>${o.source_url ? `<a href="${esc(o.source_url)}" target="_blank" rel="noreferrer">${esc(o.title)}</a>` : esc(o.title)}</h3>
+        <div class="who">${esc(o.buyer_name || "Unknown buyer")}${o.buyer_type ? " · " + esc(titleCase(o.buyer_type)) : ""}${o.country ? " · " + esc(o.country) : ""}</div>
+        ${o.summary ? `<div class="summary">${esc(o.summary)}</div>` : ""}
+        ${tags ? `<div class="tags">${tags}</div>` : ""}
+        <div class="linkrow">
+          ${link}
+          <a href="#" data-act="notes">Notes${st.notes ? " ●" : ""}</a>
+          <a href="#" data-act="copy">Copy summary</a>
+        </div>
+        <div class="notes"><textarea rows="3" data-act="notebox" placeholder="Internal notes…">${esc(st.notes)}</textarea></div>
+      </div>
+      <div class="side">
+        <span class="deadline${urgent ? " urgent" : ""}">${deadlineLabel(o.deadline)}</span>
+        <button class="act${st.saved ? " saved" : ""}" data-act="save">${st.saved ? "★ Saved" : "☆ Save"}</button>
+        <select data-act="status">${opts}</select>
+      </div>
+    </div>
+  </article>`;
+}
+
+function render() {
+  const rows = sortRows(REPORT.opportunities.filter(matches));
+  document.getElementById("resultCount").textContent = rows.length + " match";
+  const list = document.getElementById("list");
+  list.innerHTML = rows.length ? rows.map(cardHTML).join("") : `<div class="empty">No opportunities match these filters.</div>`;
+}
+
+function byId(id) { return REPORT.opportunities.find(o => o.id === id); }
+
+document.getElementById("list").addEventListener("click", e => {
+  const card = e.target.closest(".card"); if (!card) return;
+  const id = card.dataset.id; const act = e.target.dataset.act;
+  if (act === "save") { e.preventDefault(); setState(id, { saved: !stateFor(id).saved }); render(); }
+  else if (act === "notes") { e.preventDefault(); card.querySelector(".notes").classList.toggle("open"); }
+  else if (act === "copy") {
+    e.preventDefault(); const o = byId(id);
+    copyText([o.title, o.buyer_name ? "Buyer: " + o.buyer_name : "", o.deadline ? "Deadline: " + o.deadline : "", o.source_url || "", "", o.summary || ""].filter(Boolean).join("\n"));
+    e.target.textContent = "Copied!"; setTimeout(() => { e.target.textContent = "Copy summary"; }, 1200);
+  }
+});
+document.getElementById("list").addEventListener("change", e => {
+  const card = e.target.closest(".card"); if (!card) return;
+  const id = card.dataset.id; const act = e.target.dataset.act;
+  if (act === "status") setState(id, { status: e.target.value });
+  else if (act === "notebox") setState(id, { notes: e.target.value });
+});
+
+buildHeader(); buildControls(); render();
+</script>
+</body>
+</html>

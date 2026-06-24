@@ -1,128 +1,94 @@
-# Worktube — RFP Aggregator System
+# Worktube — RFP Report Generator
 
-A private internal system that aggregates, normalizes, and ranks public
-procurement and RFP opportunities from government, UN, and curated
-nonprofit/institutional sources — to help a design studio surface high-fit
-branding, web, and communications work.
+Aggregates public procurement / RFP opportunities (government, UN, curated
+sources), scores them for design-studio relevance, and bakes the results into a
+**single self-contained HTML file** you can open or host anywhere.
 
-Design principle: **signal over completeness**. Curated high-quality sources
-and design-relevant filtering over exhaustive procurement volume.
+No server, no database, no Docker. You run one command to "spin up" a report;
+the output is just a static `.html` file. Saved items, notes, and pipeline
+status are stored in the viewer's browser (localStorage).
 
-See [`docs/SPEC.md`](docs/SPEC.md) for the full technical specification.
-
-## Stack
-
-| Layer        | Choice                          |
-|--------------|---------------------------------|
-| Backend/API  | Python + FastAPI                |
-| Database     | PostgreSQL 16                   |
-| ORM          | SQLAlchemy 2.0                  |
-| HTTP client  | httpx                           |
-| Frontend     | Next.js 14 (App Router)         |
-| Queue        | Redis + worker (Phase 5 — opt.) |
-
-## Status — implementation phases
-
-- [x] **Phase 1 — Core ingestion**
-  - [x] Postgres data model (`opportunities`, `sources`, `opportunity_status`)
-  - [x] Unified normalization schema
-  - [x] Scoring engine (design fit / sector fit / penalties) — **fully tested**
-  - [x] Deduplication (external_id + dedup hash + content_hash)
-  - [x] SAM.gov ingestion adapter
-  - [x] UNGM ingestion adapter
-  - [x] Ingestion orchestrator
-  - [x] Read/write API (`/opportunities`) with filters + facets
-- [ ] **Phase 2** — Curated HTML/RSS sources
-- [ ] **Phase 3** — Tagging + enrichment expansion
-- [x] **Phase 4 — Next.js dashboard**
-  - [x] Opportunity list with filters (source/buyer/score/deadline/tags/country/search)
-  - [x] Opportunity detail page (notes, copy-summary, source link, documents)
-  - [x] Saved opportunities view
-  - [x] Pipeline/status board
-- [ ] **Phase 5** — Email/Slack digests + deadline alerts
+Design principle: **signal over completeness** — curated sources and
+design-relevant filtering over raw procurement volume. Full spec in
+[`docs/SPEC.md`](docs/SPEC.md).
 
 ## Quick start
 
 ```bash
-# 1. Start Postgres
-docker compose up -d db
-
-# 2. Install backend deps
-cd backend
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-# 3. Configure
-cp ../.env.example ../.env   # then edit values (DB url, SAM_API_KEY, ...)
+# Generate a report (no API key needed — falls back to sample data):
+python generate_report.py --demo
 
-# 4. Create tables + seed default sources
-python -m app.scripts.init_db
-
-# 5. Run the API
-uvicorn app.main:app --reload
-# -> http://localhost:8000/docs
-
-# 6. Run an ingestion pass (requires SAM_API_KEY for SAM.gov)
-python -m app.scripts.ingest --source sam
-python -m app.scripts.ingest --all
-
-# Tests (no DB / network required for the scoring + normalize suites)
-pytest
+# Open the result:
+#   reports/index.html   (latest)
+#   reports/worktube-YYYY-MM-DD.html
+open reports/index.html        # macOS  (use xdg-open on Linux, or just double-click)
 ```
 
-### Frontend (dashboard)
+With a SAM.gov API key set, it pulls live US federal opportunities:
 
 ```bash
-cd frontend
-npm install
-cp .env.local.example .env.local   # points at the API (default http://localhost:8000)
-npm run dev                         # -> http://localhost:3000
+export SAM_API_KEY=your-key-here     # https://open.gsa.gov/api/get-opportunities-public-api/
+python generate_report.py            # live sources; falls back to demo if none reachable
+python generate_report.py --sources sam
 ```
 
-The dashboard talks to the API over REST (CORS is preconfigured for
-`localhost:3000`). Routes:
+## The report
 
-- `/opportunities` — ranked list + filters (default view)
-- `/opportunities/[id]` — detail, notes, copy-summary, status, source link
-- `/saved` — saved opportunities
-- `/pipeline` — status board (new → reviewing → … → won/lost)
+The generated HTML is a small self-contained app:
 
-## Deploy (VPS)
+- ranked list of opportunities (best design/sector fit first)
+- filters: search, min fit score, deadline window (7/14/30/60d), source,
+  buyer type, tags, and a "saved only" toggle
+- per-opportunity: **save**, **pipeline status**, **notes**, **copy summary**,
+  and a link to the original listing
+- saved/status/notes persist in the browser via localStorage
 
-The full stack runs in Docker behind a Caddy reverse proxy (auto-HTTPS,
-single origin with the API under `/api`). On any Ubuntu/Debian VPS:
+## Hosting it (e.g. Hostinger)
+
+It's just files — upload the `reports/` folder (or only `index.html`) to any
+static host: Hostinger shared hosting (`public_html/`), Netlify, S3, or serve
+locally with `python -m http.server` from inside `reports/`.
+
+To refresh, re-run `generate_report.py` and re-upload. Automate with cron:
 
 ```bash
-cp .env.prod.example .env.prod   # set DOMAIN, POSTGRES_PASSWORD, SAM_API_KEY
-docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
+# Daily at 7am: regenerate into the web root
+0 7 * * * cd /path/to/worktube && .venv/bin/python generate_report.py --out /home/user/public_html
 ```
-
-Step-by-step instructions (Hostinger VPS, DNS, firewall, ingestion cron,
-backups) are in **[`DEPLOY.md`](DEPLOY.md)**.
-
-> ⚠️ The app has **no login yet** — add auth before exposing it publicly. See
-> the note at the end of `DEPLOY.md`.
 
 ## Layout
 
 ```
-backend/
-  app/
-    main.py            FastAPI app + router wiring
-    config.py          Settings (env-driven)
-    db.py              SQLAlchemy engine/session
-    models.py          ORM models (matches docs/SPEC.md §6)
-    schemas.py         Pydantic request/response + normalized schema
-    api/               REST routes
-    ingestion/         Source adapters + orchestrator + dedup
-    enrichment/        Scoring engine + keyword config
-    normalize.py       Date/currency/text normalization helpers
-    scripts/           init_db, ingest CLIs
-  tests/               Unit tests (scoring, dedup, normalize)
-frontend/
-  app/                 Next.js App Router pages (list, detail, saved, pipeline)
-  components/          Nav, OpportunityCard, Filters, Badges
-  lib/                 API client + types + formatters
-docs/SPEC.md           Full spec (V1)
-docker-compose.yml     Local Postgres
+generate_report.py     CLI entry point -> writes the HTML report
+worktube/
+  config.py            env-driven settings (API keys, scoring weights)
+  models.py            NormalizedOpportunity (the unified shape)
+  normalize.py         date / currency / text / hashing helpers
+  keywords.py          scoring keyword lists (tune these)
+  scoring.py           design-fit / sector-fit / penalty scoring (SPEC §7)
+  dedup.py             dedup + content-hash (SPEC §8)
+  pipeline.py          fetch -> dedup -> score -> sorted rows
+  render.py            bakes a report into template.html
+  template.html        the self-contained static report (HTML+CSS+JS)
+  sources/             sam.py, ungm.py, sample.py (+ base.py)
+tests/                 unit tests (scoring, dedup, normalize, sources, pipeline)
+docs/SPEC.md           full spec
 ```
+
+## Tests
+
+```bash
+pytest
+```
+
+## Notes / limits
+
+- **State is per-browser.** Saved items and notes live in localStorage, so they
+  don't sync across people or devices. Fine for solo use; that was the explicit
+  tradeoff for keeping this server-free.
+- **UNGM** has no documented public JSON API; that adapter's field mapping is
+  best-effort and should be confirmed against a live response.
+- SAM.gov needs a (free) API key for live data.
