@@ -10,6 +10,7 @@ import uuid
 from datetime import date, datetime
 
 from sqlalchemy import (
+    Boolean,
     DateTime,
     Float,
     ForeignKey,
@@ -105,6 +106,11 @@ class Opportunity(Base):
     relevance_score: Mapped[float] = mapped_column(Float, default=0.0, index=True)
     design_fit_score: Mapped[float] = mapped_column(Float, default=0.0, index=True)
 
+    # User-facing "save for later" flag (distinct from pipeline status).
+    saved: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false", index=True
+    )
+
     last_seen_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -152,8 +158,10 @@ class OpportunityStatus(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
+    # One current-state row per opportunity (upserted as the user moves it
+    # through the pipeline). History/amendments are tracked separately later.
     opportunity_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("opportunities.id", ondelete="CASCADE"), index=True
+        ForeignKey("opportunities.id", ondelete="CASCADE"), unique=True, index=True
     )
     status: Mapped[str] = mapped_column(String(16), default=PipelineStatus.new.value)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)

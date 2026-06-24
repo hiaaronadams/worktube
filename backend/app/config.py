@@ -31,5 +31,8 @@ class Settings(BaseSettings):
     sector_weight: float = 0.4
     high_fit_threshold: float = 70.0
 
+    # Frontend dev origins allowed to call the API (comma-separated in env)
+    cors_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+
 
 settings = Settings()

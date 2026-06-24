@@ -66,6 +66,9 @@ class OpportunityOut(BaseModel):
     contact_email: str | None
     relevance_score: float
     design_fit_score: float
+    saved: bool
+    pipeline_status: str
+    notes: str | None
     last_seen_at: datetime
     created_at: datetime
 
@@ -75,3 +78,21 @@ class OpportunityListOut(BaseModel):
     limit: int
     offset: int
     items: list[OpportunityOut]
+
+
+class OpportunityUpdate(BaseModel):
+    """Partial update for the dashboard actions (save/ignore, status, notes)."""
+
+    saved: bool | None = None
+    pipeline_status: str | None = None
+    notes: str | None = None
+
+
+class Facets(BaseModel):
+    """Distinct filter values for populating the dashboard filter controls."""
+
+    source_types: list[str]
+    buyer_types: list[str]
+    tags: list[str]
+    countries: list[str]
+    pipeline_statuses: list[str]

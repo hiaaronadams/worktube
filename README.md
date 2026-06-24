@@ -18,12 +18,12 @@ See [`docs/SPEC.md`](docs/SPEC.md) for the full technical specification.
 | Database     | PostgreSQL 16                   |
 | ORM          | SQLAlchemy 2.0                  |
 | HTTP client  | httpx                           |
-| Frontend     | Next.js (Phase 4 — not yet)     |
+| Frontend     | Next.js 14 (App Router)         |
 | Queue        | Redis + worker (Phase 5 — opt.) |
 
 ## Status — implementation phases
 
-- [x] **Phase 1 — Core ingestion (in progress)**
+- [x] **Phase 1 — Core ingestion**
   - [x] Postgres data model (`opportunities`, `sources`, `opportunity_status`)
   - [x] Unified normalization schema
   - [x] Scoring engine (design fit / sector fit / penalties) — **fully tested**
@@ -31,10 +31,14 @@ See [`docs/SPEC.md`](docs/SPEC.md) for the full technical specification.
   - [x] SAM.gov ingestion adapter
   - [x] UNGM ingestion adapter
   - [x] Ingestion orchestrator
-  - [x] Read API (`/opportunities`) with filters
+  - [x] Read/write API (`/opportunities`) with filters + facets
 - [ ] **Phase 2** — Curated HTML/RSS sources
 - [ ] **Phase 3** — Tagging + enrichment expansion
-- [ ] **Phase 4** — Next.js dashboard
+- [x] **Phase 4 — Next.js dashboard**
+  - [x] Opportunity list with filters (source/buyer/score/deadline/tags/country/search)
+  - [x] Opportunity detail page (notes, copy-summary, source link, documents)
+  - [x] Saved opportunities view
+  - [x] Pipeline/status board
 - [ ] **Phase 5** — Email/Slack digests + deadline alerts
 
 ## Quick start
@@ -66,6 +70,23 @@ python -m app.scripts.ingest --all
 pytest
 ```
 
+### Frontend (dashboard)
+
+```bash
+cd frontend
+npm install
+cp .env.local.example .env.local   # points at the API (default http://localhost:8000)
+npm run dev                         # -> http://localhost:3000
+```
+
+The dashboard talks to the API over REST (CORS is preconfigured for
+`localhost:3000`). Routes:
+
+- `/opportunities` — ranked list + filters (default view)
+- `/opportunities/[id]` — detail, notes, copy-summary, status, source link
+- `/saved` — saved opportunities
+- `/pipeline` — status board (new → reviewing → … → won/lost)
+
 ## Layout
 
 ```
@@ -82,6 +103,10 @@ backend/
     normalize.py       Date/currency/text normalization helpers
     scripts/           init_db, ingest CLIs
   tests/               Unit tests (scoring, dedup, normalize)
+frontend/
+  app/                 Next.js App Router pages (list, detail, saved, pipeline)
+  components/          Nav, OpportunityCard, Filters, Badges
+  lib/                 API client + types + formatters
 docs/SPEC.md           Full spec (V1)
 docker-compose.yml     Local Postgres
 ```
