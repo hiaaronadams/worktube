@@ -48,16 +48,30 @@ The generated HTML is a small self-contained app:
 
 ## Hosting it (e.g. Hostinger)
 
-It's just files — upload the `reports/` folder (or only `index.html`) to any
-static host: Hostinger shared hosting (`public_html/`), Netlify, S3, or serve
-locally with `python -m http.server` from inside `reports/`.
+The repo's **root `index.html` is the deployable website** — it's committed, so
+the repo can be served as-is. Any static host works (Hostinger, Netlify, S3),
+or run `python -m http.server` locally.
 
-To refresh, re-run `generate_report.py` and re-upload. Automate with cron:
+### Deploy to Hostinger via GitHub
+
+1. hPanel → **Websites → Git** (or **Advanced → GIT**).
+2. Repository: `https://github.com/hiaaronadams/worktube.git`, branch `main`,
+   directory `public_html`.
+3. Deploy. Visiting your domain serves the root `index.html`.
+4. (Optional) enable **Auto-Deployment** so each `git push` updates the site.
+
+### Refreshing the report
+
+Regenerate the root `index.html`, commit, and push:
 
 ```bash
-# Daily at 7am: regenerate into the web root
-0 7 * * * cd /path/to/worktube && .venv/bin/python generate_report.py --out /home/user/public_html
+python generate_report.py --out . --no-dated   # add SAM_API_KEY for live data
+git commit -am "update report" && git push     # Hostinger auto-deploys
 ```
+
+> Note: the homepage is `index.html`; the Python source files sit alongside it
+> in the repo and are harmless (not linked). To hide them from the web, drop an
+> `.htaccess` in `public_html` or have Hostinger serve only `index.html`.
 
 ## Layout
 

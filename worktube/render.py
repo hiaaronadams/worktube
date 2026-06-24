@@ -29,13 +29,21 @@ def render_html(report: Report) -> str:
     return html.replace(PLACEHOLDER, blob)
 
 
-def write_report(report: Report, out_dir: str | Path = "reports") -> tuple[Path, Path]:
-    """Write both a dated file and index.html (the latest). Returns both paths."""
+def write_report(
+    report: Report, out_dir: str | Path = "reports", *, write_dated: bool = True
+) -> tuple[Path, Path | None]:
+    """Write index.html (the latest) and, optionally, a dated copy.
+
+    Returns (index_path, dated_path | None).
+    """
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     html = render_html(report)
-    dated = out / f"worktube-{date.today().isoformat()}.html"
     latest = out / "index.html"
-    dated.write_text(html, encoding="utf-8")
     latest.write_text(html, encoding="utf-8")
-    return dated, latest
+    dated: Path | None = None
+    if write_dated:
+        dated = out / f"worktube-{date.today().isoformat()}.html"
+        dated.write_text(html, encoding="utf-8")
+    return latest, dated
+

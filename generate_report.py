@@ -24,6 +24,8 @@ def main() -> None:
     parser.add_argument("--sources", nargs="+", choices=sorted(LIVE_ADAPTERS),
                         help="limit to specific live sources (default: all)")
     parser.add_argument("--out", default="reports", help="output directory (default: reports)")
+    parser.add_argument("--no-dated", action="store_true",
+                        help="write only index.html (no dated copy) — handy for the deploy folder")
     parser.add_argument("--lookback-days", type=int, default=None, help="SAM.gov lookback window")
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
@@ -31,11 +33,12 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO if args.verbose else logging.WARNING)
 
     report = build_report(sources=args.sources, demo=args.demo, lookback_days=args.lookback_days)
-    dated, latest = write_report(report, args.out)
+    latest, dated = write_report(report, args.out, write_dated=not args.no_dated)
 
     print(f"Report written:")
     print(f"  {latest}   (latest)")
-    print(f"  {dated}")
+    if dated:
+        print(f"  {dated}")
     print(f"  {report.total} opportunities, {report.high_fit_count} high-fit "
           f"(≥{report.high_fit_threshold:g})" + ("  [DEMO DATA]" if report.demo else ""))
     for w in report.warnings:
