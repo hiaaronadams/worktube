@@ -121,20 +121,33 @@ def build_report(
 
     chosen = sources or list(BUILTIN_ADAPTERS)
 
-    if not demo:
-        for key in chosen:
-            if key not in BUILTIN_ADAPTERS:
-                statuses.append(SourceStatus(key, key, "failed", message="unknown source"))
+    # Always list every configured source so the panel is informative — in demo
+    # mode we list them (without fetching); otherwise we actually ping them.
+    for key in chosen:
+        cls = BUILTIN_ADAPTERS.get(key)
+        if cls is None:
+            statuses.append(SourceStatus(key, key, "failed", message="unknown source"))
+            continue
+        if demo:
+            ok, reason = cls.available()
+            statuses.append(SourceStatus(
+                key, cls.name, "skipped", message=reason or "not run (demo mode)"))
+            continue
+        status, records = _run_one(key, lookback_days)
+        statuses.append(status)
+        collected.extend(records)
+
+    # Curated RSS feeds (only when not restricted to a specific source list)
+    if sources is None:
+        for feed in FEEDS:
+            name = feed.get("name", feed.get("key", "RSS feed"))
+            if demo:
+                statuses.append(SourceStatus(
+                    feed.get("key", name), name, "skipped", message="not run (demo mode)"))
                 continue
-            status, records = _run_one(key, lookback_days)
+            status, records = _run_feed(feed)
             statuses.append(status)
             collected.extend(records)
-        # Curated RSS feeds (only when not restricted to a specific source list)
-        if sources is None:
-            for feed in FEEDS:
-                status, records = _run_feed(feed)
-                statuses.append(status)
-                collected.extend(records)
 
     # Fall back to sample data if nothing live came through.
     is_demo = demo or not collected
