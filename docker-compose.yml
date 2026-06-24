@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16
+    container_name: worktube-db
+    environment:
+      POSTGRES_USER: worktube
+      POSTGRES_PASSWORD: worktube
+      POSTGRES_DB: worktube
+    ports:
+      - "5432:5432"
+    volumes:
+      - worktube_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U worktube"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  worktube_pgdata:
