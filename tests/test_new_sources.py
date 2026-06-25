@@ -43,6 +43,37 @@ def test_grants_mapping():
     assert "12.345" in opp.category_raw
 
 
+def test_socrata_mapping():
+    from worktube.sources.socrata import SocrataAdapter
+
+    row = {
+        "request_id": "20260101001",
+        "short_title": "Citywide website redesign and branding services",
+        "agency_name": "Department of Design",
+        "description_of_services": "Web redesign and visual identity.",
+        "type_of_notice_description": "Solicitation",
+        "start_date": "2026-06-01T00:00:00.000",
+        "end_date": "2026-07-15T00:00:00.000",
+    }
+    a = SocrataAdapter(
+        key="nyc", name="NYC City Record", domain="data.cityofnewyork.us",
+        dataset="dg92-zbpx", buyer_type="government", source_type="nyc",
+        field_map={
+            "external_id": ["request_id"], "title": ["short_title"],
+            "buyer_name": ["agency_name"], "summary": ["description_of_services"],
+            "category_raw": ["type_of_notice_description"],
+            "posted_date": ["start_date"], "deadline": ["end_date"],
+        },
+    )
+    opp = a._map(row)
+    from datetime import date
+    assert opp.source_type == "nyc"
+    assert opp.external_id == "20260101001"
+    assert opp.buyer_type == "government"
+    assert opp.title.startswith("Citywide website redesign")
+    assert opp.deadline == date(2026, 7, 15)
+
+
 def test_rss_parsing():
     opps = parse_feed(
         RSS_SAMPLE, source_type="state", source_name="NY RFPs",

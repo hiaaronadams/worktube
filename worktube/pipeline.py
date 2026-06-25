@@ -14,11 +14,13 @@ from worktube.dedup import compute_content_hash, compute_dedup_key
 from worktube.feeds import FEEDS
 from worktube.models import NormalizedOpportunity
 from worktube.scoring import score_text
+from worktube.socrata_sources import SOCRATA_SOURCES
 from worktube.sources.base import SourceAdapter
 from worktube.sources.grants import GrantsAdapter
 from worktube.sources.rss import RssAdapter
 from worktube.sources.sam import SamAdapter
 from worktube.sources.sample import SampleAdapter
+from worktube.sources.socrata import SocrataAdapter
 from worktube.sources.ungm import UngmAdapter
 
 logger = logging.getLogger("worktube.pipeline")
@@ -108,15 +110,23 @@ def _run_one(key: str, lookback_days: int | None) -> tuple[SourceStatus, list[No
         return SourceStatus(key, adapter_cls.name, "failed", message=str(exc)[:200]), []
 
 
-def _run_feed(feed: dict) -> tuple[SourceStatus, list[NormalizedOpportunity]]:
-    name = feed.get("name", feed.get("key", "RSS feed"))
-    key = feed.get("key", name)
+def _run_configured(adapter_cls, cfg: dict) -> tuple[SourceStatus, list[NormalizedOpportunity]]:
+    """Run a config-driven source (RSS feed, Socrata dataset, ...)."""
+    name = cfg.get("name", cfg.get("key", adapter_cls.__name__))
+    key = cfg.get("key", name)
     try:
-        records = RssAdapter(**feed).fetch()
+        records = adapter_cls(**cfg).fetch()
         return SourceStatus(key, name, "ok", count=len(records)), records
     except Exception as exc:  # noqa: BLE001
-        logger.warning("RSS feed %s failed: %s", name, exc)
+        logger.warning("Source %s failed: %s", name, exc)
         return SourceStatus(key, name, "failed", message=str(exc)[:200]), []
+
+
+# Config-driven source lists: (adapter class, list of config dicts).
+CONFIGURED_SOURCES = [
+    (RssAdapter, FEEDS),
+    (SocrataAdapter, SOCRATA_SOURCES),
+]
 
 
 def build_report(
@@ -146,17 +156,19 @@ def build_report(
         statuses.append(status)
         collected.extend(records)
 
-    # Curated RSS feeds (only when not restricted to a specific source list)
+    # Config-driven sources (RSS feeds, Socrata datasets) — only when not
+    # restricted to a specific built-in source list.
     if sources is None:
-        for feed in FEEDS:
-            name = feed.get("name", feed.get("key", "RSS feed"))
-            if demo:
-                statuses.append(SourceStatus(
-                    feed.get("key", name), name, "skipped", message="not run (demo mode)"))
-                continue
-            status, records = _run_feed(feed)
-            statuses.append(status)
-            collected.extend(records)
+        for adapter_cls, cfgs in CONFIGURED_SOURCES:
+            for cfg in cfgs:
+                name = cfg.get("name", cfg.get("key", "source"))
+                if demo:
+                    statuses.append(SourceStatus(
+                        cfg.get("key", name), name, "skipped", message="not run (demo mode)"))
+                    continue
+                status, records = _run_configured(adapter_cls, cfg)
+                statuses.append(status)
+                collected.extend(records)
 
     # Fall back to sample data if nothing live came through.
     is_demo = demo or not collected
