@@ -16,6 +16,18 @@ from worktube.keywords import DESIGN_KEYWORDS, PENALTY_KEYWORDS, SECTOR_KEYWORDS
 DESIGN_SATURATION = 2.5
 SECTOR_SATURATION = 2.0
 
+# The buyer's known type is an authoritative sector signal (text keywords may
+# not mention it). All of these are valid target sectors for the studio, so a
+# recognized buyer_type gets baseline sector credit — otherwise government RFPs
+# get ~0 sector fit and can never clear the high-fit line.
+BUYER_TYPE_SECTOR = {
+    "nonprofit": 1.0,
+    "foundation": 1.0,
+    "university": 0.9,
+    "un": 0.8,
+    "government": 0.7,
+}
+
 
 @dataclass
 class ScoreResult:
@@ -77,6 +89,7 @@ def score_text(
     full_text: str | None = None,
     category_raw: str | None = None,
     buyer_name: str | None = None,
+    buyer_type: str | None = None,
 ) -> ScoreResult:
     corpus = build_corpus(
         title=title,
@@ -88,6 +101,14 @@ def score_text(
 
     design_weight, design_tags = _match_groups(corpus, DESIGN_KEYWORDS)
     sector_weight, sector_tags = _match_groups(corpus, SECTOR_KEYWORDS)
+
+    # Add baseline sector credit from the authoritative buyer_type.
+    if buyer_type:
+        baseline = BUYER_TYPE_SECTOR.get(buyer_type.strip().lower())
+        if baseline:
+            sector_weight += baseline
+            if buyer_type.strip().lower() not in sector_tags:
+                sector_tags.append(buyer_type.strip().lower())
 
     design_fit = _saturate(design_weight, DESIGN_SATURATION)
     sector_fit = _saturate(sector_weight, SECTOR_SATURATION)

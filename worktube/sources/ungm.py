@@ -41,6 +41,14 @@ def _first(rec: dict, *keys: str):
     return None
 
 
+def _parse_html_rows(html: str) -> list[NormalizedOpportunity]:
+    """Parse UNGM's HTML results fragment. Structure logged at INFO on each run;
+    this is filled in once the markup is confirmed. Returns [] until then."""
+    # TODO: implement against the logged markup (columns: Title, Deadline,
+    # Published, Organization, Type, Reference, Beneficiary country).
+    return []
+
+
 def map_record(rec: dict) -> NormalizedOpportunity:
     external_id = _first(rec, "NoticeId", "Id", "Reference", "ReferenceNo")
     title = clean_text(_first(rec, "Title", "TitleEN", "Name")) or "(untitled)"
@@ -104,6 +112,12 @@ class UngmAdapter(SourceAdapter):
             client.get(NOTICE_PAGE)
             resp = client.post(config.ungm_base_url, json=body)
             resp.raise_for_status()
+            ctype = resp.headers.get("content-type", "")
+            logger.info("UNGM POST %s ct=%s len=%d snippet=%r",
+                        resp.status_code, ctype, len(resp.text), resp.text[:400])
+            if "json" not in ctype.lower():
+                # UNGM returns an HTML results fragment, not JSON — parse rows.
+                return _parse_html_rows(resp.text)
             payload = resp.json()
 
         if isinstance(payload, dict):

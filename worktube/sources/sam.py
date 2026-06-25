@@ -55,7 +55,9 @@ def map_record(rec: dict) -> NormalizedOpportunity:
         title=clean_text(rec.get("title")) or "(untitled)",
         buyer_name=clean_text(rec.get("fullParentPathName")) or rec.get("organizationType"),
         buyer_type="government",
-        summary=clean_text(rec.get("description")),
+        # NOTE: SAM's "description" field is an API URL (needs the key), not
+        # text — never use it as the summary. Title + NAICS carry the signal.
+        summary=None,
         category_raw=category_raw,
         location=location,
         country=country or "United States",

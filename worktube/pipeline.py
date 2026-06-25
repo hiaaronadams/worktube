@@ -74,6 +74,7 @@ def _to_row(opp: NormalizedOpportunity) -> dict:
         full_text=opp.full_text,
         category_raw=opp.category_raw,
         buyer_name=opp.buyer_name,
+        buyer_type=opp.buyer_type,
     )
     row = asdict(opp)
     row["posted_date"] = _iso(opp.posted_date)
