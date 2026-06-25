@@ -23,12 +23,17 @@ from worktube.sources.ungm import UngmAdapter
 
 logger = logging.getLogger("worktube.pipeline")
 
-# Built-in live sources run by default, in order.
+# Built-in live sources, available via --sources.
 BUILTIN_ADAPTERS: dict[str, type[SourceAdapter]] = {
     "sam": SamAdapter,
     "grants": GrantsAdapter,
     "ungm": UngmAdapter,
 }
+
+# Sources run automatically (no --sources given). Grants.gov is excluded: it
+# lists federal *grants* (money to organizations), not design RFPs, so it's
+# noise for a studio. Still runnable on demand via `--sources grants`.
+DEFAULT_SOURCES: list[str] = ["sam", "ungm"]
 
 
 @dataclass
@@ -119,7 +124,7 @@ def build_report(
     statuses: list[SourceStatus] = []
     collected: list[NormalizedOpportunity] = []
 
-    chosen = sources or list(BUILTIN_ADAPTERS)
+    chosen = sources or DEFAULT_SOURCES
 
     # Always list every configured source so the panel is informative — in demo
     # mode we list them (without fetching); otherwise we actually ping them.

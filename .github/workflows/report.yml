@@ -29,7 +29,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      # Always operate on main, regardless of which branch triggered the run
+      # (scheduled runs fire on the default branch). This keeps the deploy
+      # branch — main — the single source of truth.
       - uses: actions/checkout@v4
+        with:
+          ref: main
 
       - uses: actions/setup-python@v5
         with:
@@ -52,5 +57,5 @@ jobs:
             echo "No change in report."
           else
             git commit -m "Update report [skip ci]"
-            git push
+            git push origin HEAD:main
           fi
