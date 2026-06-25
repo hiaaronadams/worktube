@@ -62,9 +62,10 @@ class Config:
     design_weight: float = _float("DESIGN_WEIGHT", 0.6)
     sector_weight: float = _float("SECTOR_WEIGHT", 0.4)
     high_fit_threshold: float = _float("HIGH_FIT_THRESHOLD", 70.0)
-    # Drop opportunities below this relevance at generation time, so the report
-    # is design signal instead of every municipal notice. Tune via env.
-    report_min_score: float = _float("REPORT_MIN_SCORE", 25.0)
+    # Only include opportunities with at least this much *design* fit, so the
+    # report is real design work — not government procurement that merely has a
+    # known buyer sector. 40 ≈ one solid design keyword (e.g. "graphic design").
+    report_min_design_fit: float = _float("REPORT_MIN_DESIGN_FIT", 40.0)
 
 
 config = Config()

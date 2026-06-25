@@ -186,10 +186,11 @@ def build_report(
         seen.add(key)
         rows.append(_to_row(opp))
 
-    # Relevance floor — keep design signal, drop the municipal/procurement noise.
-    floor = config.report_min_score
-    kept = [r for r in rows if r["relevance_score"] >= floor]
-    # Safety net: if the floor would empty the report, keep the top 25 anyway.
+    # Keep only real design work (design fit), not government procurement that
+    # merely has a known buyer sector.
+    floor = config.report_min_design_fit
+    kept = [r for r in rows if r["design_fit_score"] >= floor]
+    # Safety net: if the floor would empty the report, keep the top 25 by fit.
     if not kept and rows:
         kept = sorted(rows, key=lambda r: -r["relevance_score"])[:25]
     rows = kept
