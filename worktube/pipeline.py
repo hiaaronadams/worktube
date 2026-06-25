@@ -186,6 +186,14 @@ def build_report(
         seen.add(key)
         rows.append(_to_row(opp))
 
+    # Relevance floor — keep design signal, drop the municipal/procurement noise.
+    floor = config.report_min_score
+    kept = [r for r in rows if r["relevance_score"] >= floor]
+    # Safety net: if the floor would empty the report, keep the top 25 anyway.
+    if not kept and rows:
+        kept = sorted(rows, key=lambda r: -r["relevance_score"])[:25]
+    rows = kept
+
     rows.sort(key=lambda r: (-r["relevance_score"], r["deadline"] or "9999-12-31"))
 
     warnings = [

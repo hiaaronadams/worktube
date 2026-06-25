@@ -14,16 +14,9 @@ SOCRATA_SOURCES: list[dict] = [
         "source_type": "nyc",
         "buyer_type": "government",
         "country": "United States",
-        # Procurement notices whose title looks design/branding/web/comms
-        # related, most recent first. Filtering at the source keeps the report
-        # to signal instead of all ~1000 municipal notices.
-        "where": (
-            "section_name='Procurement' AND ("
-            "upper(short_title) like '%DESIGN%' OR upper(short_title) like '%BRAND%' OR "
-            "upper(short_title) like '%MARKETING%' OR upper(short_title) like '%COMMUNICAT%' OR "
-            "upper(short_title) like '%WEBSITE%' OR upper(short_title) like '%CREATIVE%' OR "
-            "upper(short_title) like '%GRAPHIC%' OR upper(short_title) like '%ADVERTIS%')"
-        ),
+        # Pull recent procurement notices; the report's relevance floor (applied
+        # uniformly across all sources) keeps only the design-relevant ones.
+        "where": "section_name='Procurement'",
         "order": "start_date DESC",
         "limit": 1000,
         # Columns confirmed from the live dataset.
