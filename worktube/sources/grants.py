@@ -17,8 +17,9 @@ from worktube.sources.base import SourceAdapter, http_post_json
 logger = logging.getLogger("worktube.sources.grants")
 
 API_URL = "https://api.grants.gov/v1/api/search2"
-# Broad design/comms keyword query — scoring narrows it further downstream.
-DEFAULT_KEYWORD = "design"
+# Targeted query — "design" alone pulls research/program-design noise. These
+# phrases skew toward creative/brand/comms work; scoring narrows further.
+DEFAULT_KEYWORD = "graphic design branding communications"
 
 
 def map_record(rec: dict) -> NormalizedOpportunity:
