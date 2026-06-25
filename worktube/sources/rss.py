@@ -96,5 +96,6 @@ class RssAdapter(SourceAdapter):
             buyer_type=self.buyer_type,
             country=self.country,
         )
-        logger.info("RSS %s returned %d items", self.name, len(items))
+        sample = items[0].title if items else "(none)"
+        logger.info("RSS %s returned %d items; first: %r", self.name, len(items), sample)
         return items

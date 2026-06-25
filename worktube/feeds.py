@@ -26,5 +26,18 @@ Example (uncomment + replace with a real feed URL):
 from __future__ import annotations
 
 FEEDS: list[dict] = [
-    # Add curated feeds here.
+    {
+        "key": "rfpdb_a",
+        "name": "RFPDB (feed A)",
+        "url": "https://rfpdb.com/view/feed/identifier/8870b1408f4d.rss",
+        "source_type": "rfpdb",
+        "country": "United States",
+    },
+    {
+        "key": "rfpdb_b",
+        "name": "RFPDB (feed B)",
+        "url": "https://rfpdb.com/view/feed/identifier/701371781d3c.rss",
+        "source_type": "rfpdb",
+        "country": "United States",
+    },
 ]
