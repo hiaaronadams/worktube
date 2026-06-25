@@ -17,18 +17,14 @@ logger = logging.getLogger("worktube.sources.sam")
 
 _DATE_FMT = "%m/%d/%Y"
 
-# Design-relevant NAICS codes. Querying these instead of pulling every federal
-# notice is the difference between noise and signal.
+# Design-relevant NAICS codes. SAM's public keys allow only ~10 requests/day,
+# and we make one request per code — so keep this list short (one run = N
+# requests). These four cover the studio's core work.
 DESIGN_NAICS = [
     "541430",  # Graphic Design Services
     "541490",  # Other Specialized Design Services
-    "541810",  # Advertising Agencies
-    "541820",  # Public Relations Agencies
-    "541613",  # Marketing Consulting Services
-    "541850",  # Outdoor / display advertising
-    "541922",  # Commercial Photography
+    "541810",  # Advertising Agencies (campaigns / comms)
     "541511",  # Custom Computer Programming (web design / build)
-    "511199",  # Publishing (editorial)
 ]
 
 

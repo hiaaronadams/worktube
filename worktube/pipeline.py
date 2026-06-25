@@ -30,10 +30,13 @@ BUILTIN_ADAPTERS: dict[str, type[SourceAdapter]] = {
     "ungm": UngmAdapter,
 }
 
-# Sources run automatically (no --sources given). Grants.gov is excluded: it
-# lists federal *grants* (money to organizations), not design RFPs, so it's
-# noise for a studio. Still runnable on demand via `--sources grants`.
-DEFAULT_SOURCES: list[str] = ["sam", "ungm"]
+# Sources run automatically (no --sources given).
+#  - grants excluded: federal grants are money to orgs, not design RFPs (noise).
+#  - ungm excluded: no API; its endpoint returns a JS shim, so it needs a
+#    headless browser to scrape — not worth running in CI.
+# Both remain available on demand via --sources. Curated RSS feeds (feeds.py)
+# always run in addition to these.
+DEFAULT_SOURCES: list[str] = ["sam"]
 
 
 @dataclass

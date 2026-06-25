@@ -10,8 +10,7 @@ name: Build report
 
 on:
   schedule:
-    - cron: "0 11 * * *"     # 11:00 UTC daily
-    - cron: "0 23 * * *"     # 23:00 UTC daily
+    - cron: "0 11 * * *"     # once daily (SAM allows only ~10 API calls/day)
   workflow_dispatch:          # "Run workflow" button for on-demand refresh
   push:
     branches: [main]
