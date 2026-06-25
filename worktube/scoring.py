@@ -12,8 +12,10 @@ from functools import lru_cache
 from worktube.config import config
 from worktube.keywords import DESIGN_KEYWORDS, PENALTY_KEYWORDS, SECTOR_KEYWORDS
 
-# Summed matched-weight at which a dimension saturates to 100.
-DESIGN_SATURATION = 2.5
+# Summed matched-weight at which a dimension saturates to 100. Design titles are
+# often terse (e.g. "Graphic Design Services"), so a couple of strong design
+# keywords should already signal a strong fit.
+DESIGN_SATURATION = 1.5
 SECTOR_SATURATION = 2.0
 
 # The buyer's known type is an authoritative sector signal (text keywords may
