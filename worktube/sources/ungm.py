@@ -8,12 +8,30 @@ from __future__ import annotations
 
 import logging
 
+import httpx
+
 from worktube.config import config
 from worktube.models import NormalizedOpportunity
 from worktube.normalize import clean_text, parse_date
-from worktube.sources.base import SourceAdapter, http_post_json
+from worktube.sources.base import SourceAdapter
 
 logger = logging.getLogger("worktube.sources.ungm")
+
+NOTICE_PAGE = "https://www.ungm.org/Public/Notice"
+
+# Graphic-design UNSPSC families (82140000 Graphic design + its groups).
+DESIGN_UNSPSC = ["82140000", "82141500", "82141600"]
+
+# Look like a browser — UNGM's search endpoint 403s plain API clients.
+_BROWSER_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                  "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "application/json, text/javascript, */*; q=0.01",
+    "Accept-Language": "en-US,en;q=0.9",
+    "X-Requested-With": "XMLHttpRequest",
+    "Origin": "https://www.ungm.org",
+    "Referer": NOTICE_PAGE,
+}
 
 
 def _first(rec: dict, *keys: str):
@@ -68,15 +86,26 @@ class UngmAdapter(SourceAdapter):
             "PageIndex": 0,
             "PageSize": self.page_size,
             "Title": "",
+            "Description": "",
+            "Reference": "",
+            "Flags": [],
+            "UNSPSCs": DESIGN_UNSPSC,
             "NoticeTypes": [],
+            "Agencies": [],
+            "Countries": [],
+            "Regions": [],
             "SortField": "DatePublished",
             "Ascending": False,
         }
-        payload = http_post_json(
-            config.ungm_base_url,
-            json=body,
-            headers={"Content-Type": "application/json", "Accept": "application/json"},
-        )
+        # Share cookies between a page visit and the search POST to clear the
+        # anti-bot 403.
+        with httpx.Client(headers=_BROWSER_HEADERS, timeout=config.http_timeout_seconds,
+                          follow_redirects=True) as client:
+            client.get(NOTICE_PAGE)
+            resp = client.post(config.ungm_base_url, json=body)
+            resp.raise_for_status()
+            payload = resp.json()
+
         if isinstance(payload, dict):
             records = payload.get("Notices") or payload.get("Results") or payload.get("data") or []
         else:

@@ -17,6 +17,20 @@ logger = logging.getLogger("worktube.sources.sam")
 
 _DATE_FMT = "%m/%d/%Y"
 
+# Design-relevant NAICS codes. Querying these instead of pulling every federal
+# notice is the difference between noise and signal.
+DESIGN_NAICS = [
+    "541430",  # Graphic Design Services
+    "541490",  # Other Specialized Design Services
+    "541810",  # Advertising Agencies
+    "541820",  # Public Relations Agencies
+    "541613",  # Marketing Consulting Services
+    "541850",  # Outdoor / display advertising
+    "541922",  # Commercial Photography
+    "541511",  # Custom Computer Programming (web design / build)
+    "511199",  # Publishing (editorial)
+]
+
 
 def map_record(rec: dict) -> NormalizedOpportunity:
     contacts = rec.get("pointOfContact") or []
@@ -61,22 +75,37 @@ class SamAdapter(SourceAdapter):
     def available(cls) -> tuple[bool, str]:
         return (bool(config.sam_api_key), "" if config.sam_api_key else "SAM_API_KEY not set")
 
-    def __init__(self, *, lookback_days: int | None = None, limit: int = 100):
+    def __init__(self, *, lookback_days: int | None = None, limit: int = 100,
+                 naics: list[str] | None = None):
         self.lookback_days = lookback_days or config.ingest_lookback_days
         self.limit = limit
+        self.naics = naics or DESIGN_NAICS
 
     def fetch(self) -> list[NormalizedOpportunity]:
         if not config.sam_api_key:
             raise RuntimeError("SAM_API_KEY is not set; cannot fetch SAM.gov.")
         today = date.today()
-        params = {
-            "api_key": config.sam_api_key,
-            "postedFrom": (today - timedelta(days=self.lookback_days)).strftime(_DATE_FMT),
-            "postedTo": today.strftime(_DATE_FMT),
-            "limit": self.limit,
-            "offset": 0,
-        }
-        payload = http_get_json(config.sam_base_url, params=params)
-        records = payload.get("opportunitiesData") or []
-        logger.info("SAM.gov returned %d records", len(records))
+        posted_from = (today - timedelta(days=self.lookback_days)).strftime(_DATE_FMT)
+        posted_to = today.strftime(_DATE_FMT)
+
+        seen: set[str] = set()
+        records: list[dict] = []
+        for code in self.naics:
+            params = {
+                "api_key": config.sam_api_key,
+                "postedFrom": posted_from,
+                "postedTo": posted_to,
+                "ncode": code,
+                "limit": self.limit,
+                "offset": 0,
+            }
+            payload = http_get_json(config.sam_base_url, params=params)
+            for rec in payload.get("opportunitiesData") or []:
+                key = rec.get("noticeId") or rec.get("solicitationNumber") or id(rec)
+                if key in seen:
+                    continue
+                seen.add(key)
+                records.append(rec)
+        logger.info("SAM.gov returned %d design-relevant records across %d NAICS",
+                    len(records), len(self.naics))
         return [map_record(r) for r in records]

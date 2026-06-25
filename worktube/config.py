@@ -56,7 +56,7 @@ class Config:
     # HTTP fetching
     http_timeout_seconds: float = _float("HTTP_TIMEOUT_SECONDS", 30.0)
     http_max_retries: int = _int("HTTP_MAX_RETRIES", 3)
-    ingest_lookback_days: int = _int("INGEST_LOOKBACK_DAYS", 7)
+    ingest_lookback_days: int = _int("INGEST_LOOKBACK_DAYS", 30)
 
     # Scoring (SPEC §7): final = design_weight*design_fit + sector_weight*sector_fit
     design_weight: float = _float("DESIGN_WEIGHT", 0.6)
