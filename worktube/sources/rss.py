@@ -77,17 +77,21 @@ def _map_item(it, source_type, source_name, buyer_type, country, *, atom):
 
 class RssAdapter(SourceAdapter):
     def __init__(self, *, key: str, name: str, url: str, source_type: str = "rss",
-                 buyer_type: str | None = None, country: str | None = None, **_):
+                 buyer_type: str | None = None, country: str | None = None,
+                 verify: bool = True, **_):
         self.key = key
         self.name = name
         self.url = url
         self.source_type = source_type
         self.buyer_type = buyer_type
         self.country = country
+        # Some feeds serve an incomplete TLS chain; set verify=False per-feed in
+        # feeds.py for those (safe here — public listings, no auth/secrets).
+        self.verify = verify
 
     def fetch(self) -> list[NormalizedOpportunity]:
         resp = httpx.get(self.url, timeout=config.http_timeout_seconds,
-                         headers={"User-Agent": "worktube/1.0"})
+                         headers={"User-Agent": "worktube/1.0"}, verify=self.verify)
         resp.raise_for_status()
         items = parse_feed(
             resp.text,

@@ -26,12 +26,14 @@ Example (uncomment + replace with a real feed URL):
 from __future__ import annotations
 
 FEEDS: list[dict] = [
+    # rfpdb.com serves an incomplete TLS chain -> verify=False (public listings).
     {
         "key": "rfpdb_a",
         "name": "RFPDB (feed A)",
         "url": "https://rfpdb.com/view/feed/identifier/8870b1408f4d.rss",
         "source_type": "rfpdb",
         "country": "United States",
+        "verify": False,
     },
     {
         "key": "rfpdb_b",
@@ -39,5 +41,6 @@ FEEDS: list[dict] = [
         "url": "https://rfpdb.com/view/feed/identifier/701371781d3c.rss",
         "source_type": "rfpdb",
         "country": "United States",
+        "verify": False,
     },
 ]
